@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.env
+uploads/
+data/
+*.tar.gz
+*.pdf
+*.docx
+.DS_Store

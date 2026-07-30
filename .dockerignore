@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+venv/
+.env
+*.pdf
+*.docx
+.DS_Store
+gen_test_resume.py
+test_*
