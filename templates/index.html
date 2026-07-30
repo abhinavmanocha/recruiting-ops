@@ -1124,7 +1124,21 @@ function renderInterviews() {
         const hasForm = iv.assessment_form && iv.assessment_form.assessment && iv.assessment_form.assessment.decision;
         const hasScore = Object.keys(iv.ratings||{}).length > 0 || hasForm;
         const dec = hasForm ? iv.assessment_form.assessment.decision.replace('_',' ') : '';
-        return `<div class="interview-card">\n          <div class="interview-card-date"><div class="interview-card-day">${day}</div><div class="interview-card-month">${month}</div></div>\n          <div class="interview-card-info">\n            <div class="interview-card-name">${esc(iv.candidate_name||'Unknown')}</div>\n            <div class="interview-card-meta">${esc(iv.job_title||'')} · ${iv.scheduled_time||''} · ${esc(iv.type||'')}${iv.interviewer ? ' · '+esc(iv.interviewer) : ''}${dec ? ' · ' + esc(dec) : ''}</div>\n          </div>\n          <span class="interview-card-status ${statusClass}">${iv.status}</span>\n          <div class="actions">\n            ${iv.status === 'scheduled'\n              ? `<button class="btn btn-sm btn-outline" onclick="openScorecard('${iv.id}')">${hasForm ? 'View Form' : (hasScore ? 'View' : 'Score')}</button>\n                 <button class="btn btn-sm btn-outline" onclick="editInterview('${iv.id}')">✏️</button>\n                 <button class="btn btn-sm btn-danger" onclick="cancelInterview('${iv.id}')">✕</button>`\n              : `<button class="btn btn-sm btn-outline" onclick="openScorecard('${iv.id}')">${hasForm ? 'View Form' : 'View'}</button>`}\n          </div>\n        </div>`;
+        return '<div class="interview-card" style="display:flex;align-items:center;gap:16px;padding:16px 20px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius)">' +
+          '<div class="interview-card-date" style="text-align:center;min-width:48px"><div class="interview-card-day" style="font-size:22px;font-weight:700;line-height:1.1">' + day + '</div><div class="interview-card-month" style="font-size:11px;color:var(--text-softer);text-transform:uppercase">' + month + '</div></div>' +
+          '<div class="interview-card-info" style="flex:1;min-width:0">' +
+            '<div class="interview-card-name" style="font-weight:600">' + esc(iv.candidate_name||'Unknown') + '</div>' +
+            '<div class="interview-card-meta" style="font-size:13px;color:var(--text-softer)">' + esc(iv.job_title||'') + ' · ' + (iv.scheduled_time||'') + ' · ' + esc(iv.type||'') + (iv.interviewer ? ' · '+esc(iv.interviewer) : '') + (dec ? ' · ' + esc(dec) : '') + '</div>' +
+          '</div>' +
+          '<span class="interview-card-status" style="font-size:12px;font-weight:600;color:' + (statusClass === 'scheduled' ? 'var(--primary)' : statusClass === 'completed' ? 'var(--green)' : 'var(--red)') + '">' + iv.status + '</span>' +
+          '<div class="actions" style="display:flex;gap:4px">' +
+            (iv.status === 'scheduled'
+              ? '<button class="btn btn-sm btn-outline" onclick="openScorecard(\'' + iv.id + '\')">' + (hasForm ? 'View Form' : (hasScore ? 'View' : 'Score')) + '</button>' +
+                '<button class="btn btn-sm btn-outline" onclick="editInterview(\'' + iv.id + '\')">✏️</button>' +
+                '<button class="btn btn-sm btn-danger" onclick="cancelInterview(\'' + iv.id + '\')">✕</button>'
+              : '<button class="btn btn-sm btn-outline" onclick="openScorecard(\'' + iv.id + '\')">' + (hasForm ? 'View Form' : 'View') + '</button>') +
+          '</div>' +
+        '</div>';
       }).join('')
     : '<div class="empty-state"><div class="empty-state-icon">📅</div><div class="empty-state-text">No interviews found</div></div>';
 }
