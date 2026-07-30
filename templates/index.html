@@ -485,6 +485,116 @@
   </div>
 </div>
 
+  <!-- ═══ EMPLOYEES ═══ -->
+  <div class="page" id="pageEmployees">
+    <div class="page-header">
+      <div><h1 class="page-title">Employees</h1><p class="page-subtitle">Your hired staff — manage paystubs, documents, and details</p></div>
+      <div class="flex items-center gap-2">
+        <button class="btn btn-outline" onclick="document.getElementById('empPaystubInput').click()">📄 Upload Paystub</button>
+        <input type="file" id="empPaystubInput" accept=".pdf" style="display:none" onchange="uploadBulkPaystub(this.files)">
+        <button class="btn btn-primary" onclick="openEmployeeModal()">+ Add Employee</button>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:16px">
+      <div class="flex items-center gap-3" style="flex-wrap:wrap">
+        <input id="empSearch" placeholder="Search employees..." style="width:240px" oninput="renderEmployees()">
+        <select id="empStatusFilter" onchange="renderEmployees()" style="width:auto;padding:6px 12px;font-size:13px">
+          <option value="">All Status</option>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+          <option value="terminated">Terminated</option>
+        </select>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><span class="card-title">All Employees</span></div>
+      <div id="employeeList"></div>
+    </div>
+  </div>
+
+  <!-- ═══ EMPLOYEE MODAL ═══ -->
+  <div id="employeeModal" class="modal-overlay hidden" onclick="if(event.target===this)closeModal('employeeModal')">
+    <div class="modal" style="max-width:600px">
+      <div class="modal-header">
+        <span class="modal-title" id="empModalTitle">Add Employee</span>
+        <button class="modal-close" onclick="closeModal('employeeModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-row">
+          <div class="form-group"><label>Name *</label><input id="empFormName" placeholder="Full name"></div>
+          <div class="form-group"><label>Email</label><input id="empFormEmail" placeholder="Email address" type="email"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Phone</label><input id="empFormPhone" placeholder="Phone number"></div>
+          <div class="form-group"><label>Position</label><input id="empFormPosition" placeholder="e.g. Server, Cook"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Location</label><input id="empFormLocation" placeholder="e.g. Milton"></div>
+          <div class="form-group"><label>Status</label>
+            <select id="empFormStatus">
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+              <option value="terminated">Terminated</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Start Date</label><input id="empFormStartDate" type="date"></div>
+          <div class="form-group"><label>SIN</label><input id="empFormSin" placeholder="Social Insurance Number"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Wage ($/hr)</label><input id="empFormWage" type="number" step="0.01" placeholder="e.g. 17.50"></div>
+          <div class="form-group"><label>Emergency Contact</label><input id="empFormEmergency" placeholder="Name and phone"></div>
+        </div>
+        <div class="form-group"><label>Notes</label><textarea id="empFormNotes" rows="2" placeholder="Any additional notes"></textarea></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeModal('employeeModal')">Cancel</button>
+        <button class="btn btn-primary" onclick="saveEmployee()" id="empSaveBtn">Add Employee</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ EMPLOYEE DETAIL MODAL ═══ -->
+  <div id="employeeDetailModal" class="modal-overlay hidden" onclick="if(event.target===this)closeModal('employeeDetailModal')">
+    <div class="modal" style="max-width:700px">
+      <div class="modal-header">
+        <span class="modal-title" id="empDetailTitle">Employee Details</span>
+        <button class="modal-close" onclick="closeModal('employeeDetailModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="tabs" id="empDetailTabs" style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:12px">
+          <button class="tab active" data-emptab="details" onclick="switchEmpTab('details')">Details</button>
+          <button class="tab" data-emptab="paystubs" onclick="switchEmpTab('paystubs')">Paystubs</button>
+          <button class="tab" data-emptab="documents" onclick="switchEmpTab('documents')">Documents</button>
+          <button class="tab" data-emptab="certifications" onclick="switchEmpTab('certifications')">Certifications</button>
+        </div>
+        <div id="empDetailBody"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ EMPLOYEE PAYSTUB UPLOAD MODAL ═══ -->
+  <div id="empPaystubModal" class="modal-overlay hidden" onclick="if(event.target===this)closeModal('empPaystubModal')">
+    <div class="modal" style="max-width:480px">
+      <div class="modal-header">
+        <span class="modal-title">Upload Paystub</span>
+        <button class="modal-close" onclick="closeModal('empPaystubModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group"><label>Select Employee *</label><select id="empPaystubSelect"></select></div>
+        <div class="form-group"><label>Paystub PDF</label>
+          <input type="file" id="empPaystubFile" accept=".pdf">
+        </div>
+        <div id="empPaystubProgress" class="text-sm text-soft" style="display:none;margin-top:8px">Uploading...</div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeModal('empPaystubModal')">Cancel</button>
+        <button class="btn btn-primary" onclick="confirmUploadPaystub()">Upload</button>
+      </div>
+    </div>
+  </div>
+
 <!-- ═══ INTERVIEW MODAL ═══ -->
 <div id="interviewModal" class="modal-overlay hidden" onclick="if(event.target===this)closeModal('interviewModal')">
   <div class="modal">
@@ -538,7 +648,7 @@ const API = '';
 const STAGES = ['applied','screening','interview','offer','hired','rejected'];
 const STAGE_LABELS = { applied:'Applied', screening:'Screening', interview:'Interview', offer:'Offer', hired:'Hired', rejected:'Rejected' };
 const STAGE_COLORS = { applied:'#e0e7ff', screening:'#fef3c7', interview:'#dbeafe', offer:'#d1fae5', hired:'#dcfce7', rejected:'#fee2e2' };
-let allJobs = [], allCandidates = [], allInterviews = [];
+let allJobs = [], allCandidates = [], allInterviews = [], allEmployees = [];
 let editingJobId = null, editingCandId = null, editingIntId = null;
 let activeScorecardInterviewId = null;
 
@@ -562,17 +672,18 @@ async function api(method, path, body) {
 // Data loading
 // ═══════════════════════════════════════════════════
 async function loadAll() {
-  const [jobs, candidates, interviews] = await Promise.all([
+  const [jobs, candidates, interviews, employees] = await Promise.all([
     api('GET','/api/jobs'),
     api('GET','/api/candidates'),
     api('GET','/api/interviews'),
+    api('GET','/api/employees'),
   ]);
-  allJobs = jobs; allCandidates = candidates; allInterviews = interviews;
+  allJobs = jobs; allCandidates = candidates; allInterviews = interviews; allEmployees = employees;
   renderAll();
 }
 
 function renderAll() {
-  renderDashboard(); renderJobs(); renderPipeline(); renderCandidates(); renderInterviews();
+  renderDashboard(); renderJobs(); renderPipeline(); renderCandidates(); renderInterviews(); renderEmployees();
   populateSelects();
 }
 
@@ -1076,6 +1187,288 @@ async function cancelInterview(interviewId) {
   await api('PUT', `/api/interviews/${interviewId}`, { status: 'cancelled' });
   showToast('Interview cancelled');
   await loadAll();
+}
+
+// ═══════════════════════════════════════════════════
+// Employees
+// ═══════════════════════════════════════════════════
+
+let editingEmpId = null;
+
+function renderEmployees() {
+  const search = (document.getElementById('empSearch').value || '').toLowerCase();
+  const statusFilter = document.getElementById('empStatusFilter').value;
+  let emps = allEmployees;
+  if (statusFilter) emps = emps.filter(e => e.status === statusFilter);
+  if (search) emps = emps.filter(e => (e.name||'').toLowerCase().includes(search) || (e.position||'').toLowerCase().includes(search) || (e.email||'').toLowerCase().includes(search));
+
+  document.getElementById('employeeList').innerHTML = emps.length
+    ? emps.map(e => {
+        const statusColors = { active: 'var(--green)', inactive: 'var(--gray)', terminated: 'var(--red)' };
+        const sc = statusColors[e.status] || 'var(--gray)';
+        const paystubCount = (e.paystubs||[]).length;
+        const docCount = (e.documents||[]).length;
+        return `<div class="job-card" onclick="openEmployeeDetail('${e.id}')">
+          <div class="job-card-info">
+            <div class="job-card-title">${esc(e.name)}</div>
+            <div class="job-card-meta">${esc(e.position||'')} · ${esc(e.location||'')}</div>
+            <div class="text-sm text-soft" style="margin-top:4px">
+              <span>📄 ${paystubCount} paystub${paystubCount===1?'':'s'}</span>
+              <span style="margin-left:12px">📎 ${docCount} document${docCount===1?'':'s'}</span>
+            </div>
+          </div>
+          <span class="badge" style="background:${sc}20;color:${sc};border:1px solid ${sc}40">${e.status}</span>
+          <div class="actions">
+            <button class="btn btn-sm btn-outline" onclick="event.stopPropagation();openEmployeeModal('${e.id}')">✏️</button>
+            <button class="btn btn-sm btn-danger" onclick="event.stopPropagation();deleteEmployee('${e.id}')">🗑️</button>
+          </div>
+        </div>`;
+      }).join('')
+    : '<div class="empty-state"><div class="empty-state-icon">👥</div><div class="empty-state-text">No employees found</div><div class="empty-state-sub">Add your first employee or adjust filters</div></div>';
+}
+
+function openEmployeeModal(empId) {
+  editingEmpId = null;
+  document.getElementById('empModalTitle').textContent = 'Add Employee';
+  document.getElementById('empSaveBtn').textContent = 'Add Employee';
+  document.getElementById('empFormName').value = '';
+  document.getElementById('empFormEmail').value = '';
+  document.getElementById('empFormPhone').value = '';
+  document.getElementById('empFormPosition').value = '';
+  document.getElementById('empFormLocation').value = '';
+  document.getElementById('empFormStatus').value = 'active';
+  document.getElementById('empFormStartDate').value = '';
+  document.getElementById('empFormSin').value = '';
+  document.getElementById('empFormWage').value = '';
+  document.getElementById('empFormEmergency').value = '';
+  document.getElementById('empFormNotes').value = '';
+  document.getElementById('employeeModal').classList.remove('hidden');
+  document.getElementById('empFormName').focus();
+
+  if (empId) {
+    const emp = allEmployees.find(e => e.id === empId);
+    if (!emp) return;
+    editingEmpId = empId;
+    document.getElementById('empModalTitle').textContent = 'Edit Employee';
+    document.getElementById('empSaveBtn').textContent = 'Save Changes';
+    document.getElementById('empFormName').value = emp.name || '';
+    document.getElementById('empFormEmail').value = emp.email || '';
+    document.getElementById('empFormPhone').value = emp.phone || '';
+    document.getElementById('empFormPosition').value = emp.position || '';
+    document.getElementById('empFormLocation').value = emp.location || '';
+    document.getElementById('empFormStatus').value = emp.status || 'active';
+    document.getElementById('empFormStartDate').value = emp.start_date || '';
+    document.getElementById('empFormSin').value = emp.sin || '';
+    document.getElementById('empFormWage').value = emp.wage || '';
+    document.getElementById('empFormEmergency').value = emp.emergency_contact || '';
+    document.getElementById('empFormNotes').value = emp.notes || '';
+  }
+}
+
+async function saveEmployee() {
+  const name = document.getElementById('empFormName').value.trim();
+  if (!name) return showToast('Employee name is required');
+  const body = {
+    name,
+    email: document.getElementById('empFormEmail').value.trim(),
+    phone: document.getElementById('empFormPhone').value.trim(),
+    position: document.getElementById('empFormPosition').value.trim(),
+    location: document.getElementById('empFormLocation').value.trim(),
+    status: document.getElementById('empFormStatus').value,
+    start_date: document.getElementById('empFormStartDate').value,
+    sin: document.getElementById('empFormSin').value.trim(),
+    wage: document.getElementById('empFormWage').value,
+    emergency_contact: document.getElementById('empFormEmergency').value.trim(),
+    notes: document.getElementById('empFormNotes').value.trim(),
+  };
+  if (editingEmpId) {
+    await api('PUT', `/api/employees/${editingEmpId}`, body);
+    showToast('Employee updated');
+  } else {
+    await api('POST', '/api/employees', body);
+    showToast('Employee added');
+  }
+  closeModal('employeeModal');
+  await loadAll();
+}
+
+async function deleteEmployee(empId) {
+  const emp = allEmployees.find(e => e.id === empId);
+  if (!emp || !confirm(`Delete employee "${emp.name}"? This cannot be undone.`)) return;
+  await api('DELETE', `/api/employees/${empId}`);
+  showToast('Employee deleted');
+  await loadAll();
+}
+
+// ── Employee Detail Modal ──
+
+let _activeEmpDetailId = null;
+
+async function openEmployeeDetail(empId) {
+  _activeEmpDetailId = empId;
+  const emp = await api('GET', `/api/employees/${empId}`);
+  document.getElementById('empDetailTitle').textContent = emp.name || 'Employee Details';
+  document.getElementById('employeeDetailModal').classList.remove('hidden');
+  switchEmpTab('details');
+}
+
+function switchEmpTab(tab) {
+  document.querySelectorAll('#empDetailTabs .tab').forEach(t => t.classList.remove('active'));
+  document.querySelector(`#empDetailTabs .tab[data-emptab="${tab}"]`).classList.add('active');
+  const empId = _activeEmpDetailId;
+  if (!empId) return;
+  api('GET', `/api/employees/${empId}`).then(emp => {
+    const body = document.getElementById('empDetailBody');
+    if (tab === 'details') {
+      const certs = emp.certifications || {};
+      const certKeys = Object.keys(certs).length ? Object.keys(certs) : ['smart_serve','food_handler','WHMIS','allergen_awareness','first_aid'];
+      body.innerHTML = `<div class="detail-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="detail-field"><div class="detail-label">Name</div><div class="detail-value">${esc(emp.name)}</div></div>
+        <div class="detail-field"><div class="detail-label">Email</div><div class="detail-value">${esc(emp.email||'—')}</div></div>
+        <div class="detail-field"><div class="detail-label">Phone</div><div class="detail-value">${esc(emp.phone||'—')}</div></div>
+        <div class="detail-field"><div class="detail-label">Position</div><div class="detail-value">${esc(emp.position||'—')}</div></div>
+        <div class="detail-field"><div class="detail-label">Location</div><div class="detail-value">${esc(emp.location||'—')}</div></div>
+        <div class="detail-field"><div class="detail-label">Status</div><div class="detail-value"><span class="badge" style="background:${emp.status==='active'?'var(--green)':emp.status==='terminated'?'var(--red)':'var(--gray)'}20;color:${emp.status==='active'?'var(--green)':emp.status==='terminated'?'var(--red)':'var(--gray)'}">${emp.status}</span></div></div>
+        <div class="detail-field"><div class="detail-label">Start Date</div><div class="detail-value">${esc(emp.start_date||'—')}</div></div>
+        <div class="detail-field"><div class="detail-label">SIN</div><div class="detail-value">${esc(emp.sin||'—')}</div></div>
+        <div class="detail-field"><div class="detail-label">Wage</div><div class="detail-value">${emp.wage ? '$'+parseFloat(emp.wage).toFixed(2)+'/hr' : '—'}</div></div>
+        <div class="detail-field"><div class="detail-label">Emergency Contact</div><div class="detail-value">${esc(emp.emergency_contact||'—')}</div></div>
+      </div>
+      ${emp.notes ? `<div style="margin-top:12px"><div class="detail-label">Notes</div><p style="margin-top:4px;font-size:13px">${esc(emp.notes)}</p></div>` : ''}`;
+    } else if (tab === 'paystubs') {
+      const paystubs = emp.paystubs || [];
+      body.innerHTML = `<div style="margin-bottom:12px">
+        <button class="btn btn-sm btn-outline" onclick="uploadPaystubToEmp('${emp.id}')">📄 Upload Paystub</button>
+      </div>
+      ${paystubs.length
+        ? paystubs.map((p,i) => `<div class="file-row" style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
+            <span>📄 ${esc(p)}</span>
+            <a href="/api/employees/${emp.id}/files/paystubs/${encodeURIComponent(p)}" target="_blank" class="btn btn-sm btn-outline">⬇ Download</a>
+          </div>`).join('')
+        : '<div class="text-soft text-sm">No paystubs uploaded yet</div>'}`;
+    } else if (tab === 'documents') {
+      const docs = emp.documents || [];
+      body.innerHTML = `<div style="margin-bottom:12px">
+        <button class="btn btn-sm btn-outline" onclick="uploadDocToEmp('${emp.id}')">📎 Upload Document</button>
+      </div>
+      ${docs.length
+        ? docs.map((d,i) => `<div class="file-row" style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
+            <span>📎 ${esc(d)}</span>
+            <a href="/api/employees/${emp.id}/files/documents/${encodeURIComponent(d)}" target="_blank" class="btn btn-sm btn-outline">⬇ Download</a>
+          </div>`).join('')
+        : '<div class="text-soft text-sm">No documents uploaded yet</div>'}`;
+    } else if (tab === 'certifications') {
+      const certs = emp.certifications || {};
+      const certFields = [
+        {key:'smart_serve',label:'Smart Serve'},
+        {key:'food_handler',label:'Food Handler'},
+        {key:'WHMIS',label:'WHMIS'},
+        {key:'allergen_awareness',label:'Allergen Awareness'},
+        {key:'first_aid',label:'First Aid / CPR'},
+      ];
+      body.innerHTML = `<p class="text-sm text-soft" style="margin-bottom:12px">Toggle certifications on/off for this employee.</p>
+        ${certFields.map(cf => {
+          const checked = certs[cf.key] ? 'checked' : '';
+          return `<label class="toggle-row" style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer">
+            <span style="font-size:14px">${cf.label}</span>
+            <input type="checkbox" ${checked} onchange="updateEmpCert('${emp.id}','${cf.key}',this.checked)" style="width:auto;accent-color:var(--primary)">
+          </label>`;
+        }).join('')}`;
+    }
+  }).catch(e => {
+    document.getElementById('empDetailBody').innerHTML = `<div class="text-red">Error loading details: ${esc(e.message)}</div>`;
+  });
+}
+
+async function updateEmpCert(empId, key, value) {
+  try {
+    const emp = await api('GET', `/api/employees/${empId}`);
+    const certs = emp.certifications || {};
+    certs[key] = value;
+    await api('PUT', `/api/employees/${empId}`, { certifications: certs });
+    showToast(`Certification updated`);
+  } catch (e) {
+    showToast('Failed to update certification: ' + e.message);
+  }
+}
+
+// ── Upload Paystub (to a specific employee) ──
+
+function uploadPaystubToEmp(empId) {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.pdf';
+  input.onchange = async function() {
+    const file = input.files[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append('paystub', file);
+    try {
+      await api('POST', `/api/employees/${empId}/paystub`, formData);
+      showToast('Paystub uploaded');
+      closeModal('employeeDetailModal');
+      await loadAll();
+    } catch (e) {
+      showToast('Upload failed: ' + e.message);
+    }
+  };
+  input.click();
+}
+
+function uploadDocToEmp(empId) {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.pdf,.docx,.doc,.jpg,.jpeg,.png';
+  input.onchange = async function() {
+    const file = input.files[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append('document', file);
+    try {
+      await api('POST', `/api/employees/${empId}/document`, formData);
+      showToast('Document uploaded');
+      closeModal('employeeDetailModal');
+      await loadAll();
+    } catch (e) {
+      showToast('Upload failed: ' + e.message);
+    }
+  };
+  input.click();
+}
+
+// ── Bulk Paystub Upload ──
+
+function uploadBulkPaystub(files) {
+  if (!files || !files.length) return;
+  // Build the employee select dropdown
+  const select = document.getElementById('empPaystubSelect');
+  select.innerHTML = allEmployees.map(e => `<option value="${e.id}">${esc(e.name)} — ${esc(e.position||'')}</option>`).join('');
+  document.getElementById('empPaystubFile').value = '';
+  document.getElementById('empPaystubProgress').style.display = 'none';
+  document.getElementById('empPaystubModal').classList.remove('hidden');
+}
+
+async function confirmUploadPaystub() {
+  const empId = document.getElementById('empPaystubSelect').value;
+  if (!empId) return showToast('Please select an employee');
+  const fileInput = document.getElementById('empPaystubFile');
+  const file = fileInput.files[0];
+  if (!file) return showToast('Please select a PDF file');
+  if (file.type !== 'application/pdf' && !file.name.match(/\.pdf$/i)) {
+    return showToast('Only PDF files are supported for paystubs');
+  }
+  const formData = new FormData();
+  formData.append('paystub', file);
+  document.getElementById('empPaystubProgress').style.display = 'block';
+  try {
+    await api('POST', `/api/employees/${empId}/paystub`, formData);
+    showToast('Paystub uploaded');
+    closeModal('empPaystubModal');
+    await loadAll();
+  } catch (e) {
+    showToast('Upload failed: ' + e.message);
+    document.getElementById('empPaystubProgress').style.display = 'none';
+  }
 }
 
 // ═══════════════════════════════════════════════════
