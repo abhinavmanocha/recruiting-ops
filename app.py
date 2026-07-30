@@ -47,6 +47,7 @@ DATA_DIR = BASE_DIR / "data"
 JOBS_DIR = DATA_DIR / "jobs"
 CANDIDATES_DIR = DATA_DIR / "candidates"
 INTERVIEWS_DIR = DATA_DIR / "interviews"
+EMPLOYEES_DIR = DATA_DIR / "employees"
 UPLOADS_DIR = Path(os.environ.get("RECRUIT_UPLOADS_DIR", BASE_DIR / "uploads"))
 CLOUD_RUN = os.environ.get("K_SERVICE") is not None
 
@@ -54,7 +55,7 @@ CLOUD_RUN = os.environ.get("K_SERVICE") is not None
 if CLOUD_RUN:
     UPLOADS_DIR = Path("/tmp/uploads")
 
-for d in [DATA_DIR, JOBS_DIR, CANDIDATES_DIR, INTERVIEWS_DIR, UPLOADS_DIR]:
+for d in [DATA_DIR, JOBS_DIR, CANDIDATES_DIR, INTERVIEWS_DIR, EMPLOYEES_DIR, UPLOADS_DIR]:
     d.mkdir(parents=True, exist_ok=True)
 
 STAGES = ["applied", "screening", "interview", "offer", "hired", "rejected"]
