@@ -1218,7 +1218,30 @@ async function openScorecard(interviewId) {
         <input type="hidden" id="req_food" value="${req.food_handler||''}">
       </div>
     </div>
-    <div class="toggle-row"><span class="toggle-label">Participate in Nudge (smart-scheduling)</span>${toggle('req_nudge', req.nudge_app, `<button type="button" class="${req.nudge_app==='na'?'selected-na':''}" onclick="setToggle3('req_nudge','na')">N/A</button>`)}</div>
+    <div class="toggle-row"><span class="toggle-label">7shifts (smart-scheduling)</span>
+      <div class="toggle-yesno">
+        <button type="button" class="${req.seven_shifts==='yes'?'selected-yes':''}" onclick="setToggle3('req_sevenshifts','yes')">Yes</button>
+        <button type="button" class="${req.seven_shifts==='no'?'selected-no':''}" onclick="setToggle3('req_sevenshifts','no')">No</button>
+        <button type="button" class="${req.seven_shifts==='na'?'selected-na':''}" onclick="setToggle3('req_sevenshifts','na')">N/A</button>
+        <input type="hidden" id="req_sevenshifts" value="${req.seven_shifts||''}">
+      </div>
+    </div>
+    <div class="toggle-row"><span class="toggle-label">Yoobic</span>
+      <div class="toggle-yesno">
+        <button type="button" class="${req.yoobic==='yes'?'selected-yes':''}" onclick="setToggle3('req_yoobic','yes')">Yes</button>
+        <button type="button" class="${req.yoobic==='no'?'selected-no':''}" onclick="setToggle3('req_yoobic','no')">No</button>
+        <button type="button" class="${req.yoobic==='na'?'selected-na':''}" onclick="setToggle3('req_yoobic','na')">N/A</button>
+        <input type="hidden" id="req_yoobic" value="${req.yoobic||''}">
+      </div>
+    </div>
+    <div class="toggle-row"><span class="toggle-label">Ameego</span>
+      <div class="toggle-yesno">
+        <button type="button" class="${req.ameego==='yes'?'selected-yes':''}" onclick="setToggle3('req_ameego','yes')">Yes</button>
+        <button type="button" class="${req.ameego==='no'?'selected-no':''}" onclick="setToggle3('req_ameego','no')">No</button>
+        <button type="button" class="${req.ameego==='na'?'selected-na':''}" onclick="setToggle3('req_ameego','na')">N/A</button>
+        <input type="hidden" id="req_ameego" value="${req.ameego||''}">
+      </div>
+    </div>
     <div class="toggle-row"><span class="toggle-label">Unpaid Training Days</span>
       <div class="toggle-yesno">
         <button type="button" class="${req.unpaid_training==='1'?'selected-yes':''}" onclick="setToggle3('req_training','1')">1</button>
@@ -1235,6 +1258,13 @@ async function openScorecard(interviewId) {
         <button type="button" class="${req.open_close==='no'?'selected-no':''}" onclick="setToggle3('req_openclose','no')">No</button>
         <button type="button" class="${req.open_close==='restrictions'?'selected-na':''}" onclick="setToggle3('req_openclose','restrictions')">Restrictions</button>
         <input type="hidden" id="req_openclose" value="${req.open_close||''}">
+      </div>
+    </div>
+    <div class="toggle-row"><span class="toggle-label">Probationary (3 months from start date)</span>
+      <div class="toggle-yesno">
+        <button type="button" class="${req.probationary==='yes'?'selected-yes':''}" onclick="setToggle3('req_probation','yes')">Yes</button>
+        <button type="button" class="${req.probationary==='no'?'selected-no':''}" onclick="setToggle3('req_probation','no')">No</button>
+        <input type="hidden" id="req_probation" value="${req.probationary||''}">
       </div>
     </div>
   </div>`;
@@ -1391,9 +1421,11 @@ function _collectAssessmentForm() {
       sweeping: reqVal('sweeping'), toilet: reqVal('toilet'), dishes: reqVal('dishes'),
       lift50: reqVal('lift50'), rawmeat: reqVal('rawmeat'), uniform: reqVal('uniform'),
       nails: reqVal('nails'), allergies: val('req_allergies'),
-      food_handler: val('req_food'), nudge_app: val('req_nudge'),
+      food_handler: val('req_food'), seven_shifts: val('req_sevenshifts'),
+      yoobic: val('req_yoobic'), ameego: val('req_ameego'),
       unpaid_training: val('req_training'),
       three_day_training: reqVal('3day'), open_close: val('req_openclose'),
+      probationary: val('req_probation'),
     },
     logistics: {
       hours_per_week: val('log_hours'), wage_expectation: val('log_wage'),
