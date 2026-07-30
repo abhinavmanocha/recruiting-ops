@@ -214,6 +214,40 @@
   .resume-spinner { width: 18px; height: 18px; border: 2px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin .6s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
+  /* ── Interview Assessment Form ── */
+  .assessment-section { margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+  .assessment-section:last-child { border-bottom: none; }
+  .assessment-section h3 { font-size: 15px; font-weight: 700; margin-bottom: 12px; color: var(--primary); }
+  .radio-group { display: flex; gap: 6px; flex-wrap: wrap; }
+  .radio-group label { display: inline-flex; align-items: center; gap: 4px; padding: 4px 12px; border: 1px solid var(--border); border-radius: 20px; font-size: 13px; cursor: pointer; background: var(--bg); transition: all .15s; }
+  .radio-group label:hover { border-color: var(--primary); }
+  .radio-group input[type="radio"]:checked + span, .radio-group input[type="radio"]:checked ~ span { color: var(--primary); font-weight: 600; }
+  .radio-group input[type="radio"]:checked ~ label { border-color: var(--primary); background: var(--primary-light); }
+  .radio-group label:has(input:checked) { border-color: var(--primary); background: var(--primary-light); }
+  .radio-group input[type="radio"] { display: none; }
+  .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; }
+  .toggle-label { font-size: 13px; }
+  .toggle-yesno { display: flex; gap: 4px; }
+  .toggle-yesno button { padding: 3px 14px; border: 1px solid var(--border); border-radius: 20px; font-size: 12px; font-weight: 600; background: var(--bg); }
+  .toggle-yesno button.selected-yes { background: var(--green-light); color: var(--green); border-color: var(--green); }
+  .toggle-yesno button.selected-no { background: var(--red-light); color: var(--red); border-color: var(--red); }
+  .toggle-yesno button.selected-na { background: var(--gray-light); color: var(--gray); border-color: var(--gray); }
+
+  /* Availability grid */
+  .avail-grid { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .avail-grid th, .avail-grid td { border: 1px solid var(--border); padding: 6px 8px; text-align: center; }
+  .avail-grid th { background: var(--gray-light); font-weight: 600; font-size: 12px; }
+  .avail-grid .avail-cell { cursor: pointer; transition: all .1s; user-select: none; min-width: 60px; }
+  .avail-grid .avail-cell:hover { background: var(--primary-light); }
+  .avail-grid .avail-cell.checked { background: var(--green-light); color: var(--green); font-weight: 700; }
+  .avail-grid .avail-cell.checked::after { content: " ✓"; }
+
+  /* Overall rating stars */
+  .overall-stars { display: flex; gap: 6px; }
+  .overall-stars .star { font-size: 28px; cursor: pointer; color: #d1d5db; transition: color .1s; }
+  .overall-stars .star.active { color: #f59e0b; }
+  .overall-stars .star:hover { color: #fbbf24; }
+
   @media (max-width: 768px) {
     .app-header-inner { padding: 0 12px; gap: 8px; }
     .nav-tab span { display: none; }
@@ -482,15 +516,15 @@
 
 <!-- ═══ SCORECARD MODAL ═══ -->
 <div id="scorecardModal" class="modal-overlay hidden" onclick="if(event.target===this)closeModal('scorecardModal')">
-  <div class="modal" style="max-width:560px">
+  <div class="modal" style="max-width:800px">
     <div class="modal-header">
       <span class="modal-title" id="scorecardTitle">Interview Scorecard</span>
       <button class="modal-close" onclick="closeModal('scorecardModal')">&times;</button>
     </div>
     <div class="modal-body" id="scorecardBody"></div>
-    <div class="modal-footer">
+    <div class="modal-footer" id="scorecardFooter">
       <button class="btn btn-outline" onclick="closeModal('scorecardModal')">Close</button>
-      <button class="btn btn-primary" onclick="saveScorecard()" id="scorecardSaveBtn">Save Scorecard</button>
+      <button class="btn btn-primary" onclick="saveScorecard()" id="scorecardSaveBtn">Save Assessment</button>
     </div>
   </div>
 </div>
@@ -879,15 +913,17 @@ async function viewCandidateDetail(candidateId) {
   body += `<h3 style="font-size:15px;margin-bottom:8px">Interviews (${ivs.length})</h3>`;
   if (ivs.length) {
     body += ivs.map(iv => {
-      const hasScore = Object.keys(iv.ratings||{}).length > 0;
-      const scoreLabel = hasScore ? ' ✅ Scored' : ' ⏳ Pending';
+      const hasForm = iv.assessment_form && iv.assessment_form.assessment && iv.assessment_form.assessment.decision;
+      const hasScore = Object.keys(iv.ratings||{}).length > 0 || hasForm;
+      const scoreLabel = hasForm ? `✅ ${esc(iv.assessment_form.assessment.decision.replace('_',' '))}` : (hasScore ? ' ✅ Scored' : ' ⏳ Pending');
+      const wage = (iv.assessment_form && iv.assessment_form.assessment && iv.assessment_form.assessment.recommended_wage) || '';
       return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">
         <div>
           <strong>${iv.scheduled_date||''} ${iv.scheduled_time||''}</strong>
           <span class="text-soft text-sm"> · ${esc(iv.type||'')}${iv.interviewer ? ' · '+esc(iv.interviewer) : ''}</span>
-          <div class="text-sm text-soft">${iv.recommendation ? 'Recommendation: '+esc(iv.recommendation) : scoreLabel}</div>
+          <div class="text-sm text-soft">${iv.recommendation ? 'Decision: '+esc(iv.recommendation) : scoreLabel}${wage ? ' · $'+esc(wage)+'/hr' : ''}</div>
         </div>
-        <button class="btn btn-sm btn-outline" onclick="openScorecard('${iv.id}')">${hasScore ? 'View' : 'Score'}</button>
+        <button class="btn btn-sm btn-outline" onclick="openScorecard('${iv.id}')">${hasForm ? 'View Form' : (hasScore ? 'View' : 'Score')}</button>
       </div>`;
     }).join('');
   } else {
@@ -973,22 +1009,10 @@ function renderInterviews() {
         const month = parts[1] ? ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(parts[1])-1]||'' : '';
         const day = parts[2] || '';
         const statusClass = iv.status === 'scheduled' ? 'status-scheduled' : iv.status === 'completed' ? 'status-completed' : 'status-cancelled';
-        const hasScore = Object.keys(iv.ratings||{}).length > 0;
-        return `<div class="interview-card">
-          <div class="interview-card-date"><div class="interview-card-day">${day}</div><div class="interview-card-month">${month}</div></div>
-          <div class="interview-card-info">
-            <div class="interview-card-name">${esc(iv.candidate_name||'Unknown')}</div>
-            <div class="interview-card-meta">${esc(iv.job_title||'')} · ${iv.scheduled_time||''} · ${esc(iv.type||'')}${iv.interviewer ? ' · '+esc(iv.interviewer) : ''}</div>
-          </div>
-          <span class="interview-card-status ${statusClass}">${iv.status}</span>
-          <div class="actions">
-            ${iv.status === 'scheduled'
-              ? `<button class="btn btn-sm btn-outline" onclick="openScorecard('${iv.id}')">${hasScore ? 'View' : 'Score'}</button>
-                 <button class="btn btn-sm btn-outline" onclick="editInterview('${iv.id}')">✏️</button>
-                 <button class="btn btn-sm btn-danger" onclick="cancelInterview('${iv.id}')">✕</button>`
-              : `<button class="btn btn-sm btn-outline" onclick="openScorecard('${iv.id}')">View</button>`}
-          </div>
-        </div>`;
+        const hasForm = iv.assessment_form && iv.assessment_form.assessment && iv.assessment_form.assessment.decision;
+        const hasScore = Object.keys(iv.ratings||{}).length > 0 || hasForm;
+        const dec = hasForm ? iv.assessment_form.assessment.decision.replace('_',' ') : '';
+        return `<div class="interview-card">\n          <div class="interview-card-date"><div class="interview-card-day">${day}</div><div class="interview-card-month">${month}</div></div>\n          <div class="interview-card-info">\n            <div class="interview-card-name">${esc(iv.candidate_name||'Unknown')}</div>\n            <div class="interview-card-meta">${esc(iv.job_title||'')} · ${iv.scheduled_time||''} · ${esc(iv.type||'')}${iv.interviewer ? ' · '+esc(iv.interviewer) : ''}${dec ? ' · ' + esc(dec) : ''}</div>\n          </div>\n          <span class="interview-card-status ${statusClass}">${iv.status}</span>\n          <div class="actions">\n            ${iv.status === 'scheduled'\n              ? `<button class="btn btn-sm btn-outline" onclick="openScorecard('${iv.id}')">${hasForm ? 'View Form' : (hasScore ? 'View' : 'Score')}</button>\n                 <button class="btn btn-sm btn-outline" onclick="editInterview('${iv.id}')">✏️</button>\n                 <button class="btn btn-sm btn-danger" onclick="cancelInterview('${iv.id}')">✕</button>`\n              : `<button class="btn btn-sm btn-outline" onclick="openScorecard('${iv.id}')">${hasForm ? 'View Form' : 'View'}</button>`}\n          </div>\n        </div>`;
       }).join('')
     : '<div class="empty-state"><div class="empty-state-icon">📅</div><div class="empty-state-text">No interviews found</div></div>';
 }
@@ -1061,85 +1085,364 @@ async function openScorecard(interviewId) {
   const iv = await api('GET', `/api/interviews/${interviewId}`);
   const c = allCandidates.find(x => x.id === iv.candidate_id) || {};
   const job = allJobs.find(j => j.id === iv.job_id) || {};
-  const criteria = job.scorecard_criteria || ['Communication','Experience & Skills','Culture Fit','Reliability','Overall Impression'];
-  const ratings = iv.ratings || {};
-  const recommendation = iv.recommendation || '';
+  const form = iv.assessment_form || {};
 
-  document.getElementById('scorecardTitle').textContent = `Scorecard: ${iv.candidate_name || 'Candidate'}`;
+  document.getElementById('scorecardTitle').textContent =
+    `Interview Assessment: ${iv.candidate_name || 'Candidate'}`;
 
-  let body = `<div class="text-sm text-soft mb-4">${esc(job.title||'')} · ${iv.scheduled_date||''} · ${iv.interviewer ? esc(iv.interviewer) : ''}</div>`;
-
-  body += '<div style="margin-bottom:16px">';
-  criteria.forEach(cr => {
-    const val = ratings[cr] || 0;
-    body += `<div class="rating-row">
-      <span class="rating-label">${esc(cr)}</span>
-      <div class="rating-stars" data-criterion="${esc(cr)}">
-        ${[1,2,3,4,5].map(n => `<span class="star ${n <= val ? 'active' : ''}" data-rating="${n}" onclick="setRating('${esc(cr)}', ${n})">★</span>`).join('')}
-      </div>
+  // Helper to build radio group
+  function radio(name, options, value) {
+    return options.map(o => {
+      const checked = (value || '') === o.value ? 'checked' : '';
+      return `<label><input type="radio" name="${name}" value="${o.value}" ${checked}><span>${o.label}</span></label>`;
+    }).join('');
+  }
+  // Helper for yes/no toggle buttons
+  function toggle(name, value, extra) {
+    const v = value || '';
+    const extraBtns = extra || '';
+    return `<div class="toggle-yesno">
+      <button type="button" class="${v==='yes'?'selected-yes':''}" onclick="this.parentElement.querySelectorAll('button').forEach(b=>b.className='');this.className='selected-yes';document.getElementById('${name}').value='yes'">Yes</button>
+      <button type="button" class="${v==='no'?'selected-no':''}" onclick="this.parentElement.querySelectorAll('button').forEach(b=>b.className='');this.className='selected-no';document.getElementById('${name}').value='no'">No</button>
+      ${extraBtns}
+      <input type="hidden" id="${name}" value="${v}">
     </div>`;
+  }
+
+  const avail = form.availability || {};
+
+  let body = `<div class="text-sm text-soft mb-4" style="text-align:center;font-weight:700;font-size:16px;color:var(--text)">ST. LOUIS WINGS — Interview Assessment Form</div>`;
+
+  // ── SECTION 1: Position & Applicant ──
+  body += `<div class="assessment-section">
+    <h3>1 — Position &amp; Applicant Information</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Position Applied For</label><input id="af_position" value="${esc(form.position_applied||job.title||'')}" class="w-full"></div>
+      <div class="form-group"><label>Name</label><input value="${esc(c.name||'')}" readonly class="w-full" style="background:#f3f4f6"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Phone</label><input value="${esc(c.phone||'')}" readonly class="w-full" style="background:#f3f4f6"></div>
+      <div class="form-group"><label>Email</label><input value="${esc(c.email||'')}" readonly class="w-full" style="background:#f3f4f6"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Status in Canada</label>
+        <select id="af_status" class="w-full">
+          <option value="">-- Select --</option>
+          ${['Canadian Citizen','Permanent Resident','Work Permit','Study Permit','Visitor','Other'].map(o =>
+            `<option value="${o}" ${form.status_in_canada===o?'selected':''}>${o}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group"><label>Arrival Date (if applicable)</label><input id="af_arrival" type="date" value="${form.arrival_date||''}" class="w-full"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Semester (if student)</label><input id="af_semester" value="${form.semester||''}" class="w-full" placeholder="e.g. Fall 2026"></div>
+      <div class="form-group"><label>Residence (City)</label><input id="af_city" value="${form.residence_city||''}" class="w-full"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Driver's License</label>
+        <div style="display:flex;gap:8px;align-items:center">
+          ${radio('af_dl', [{label:'Yes',value:'yes'},{label:'No',value:'no'}], form.drivers_license)}
+          <input id="af_dl_class" placeholder="Class" value="${form.drivers_license_class||''}" style="width:100px;padding:6px 10px">
+        </div>
+      </div>
+      <div class="form-group"><label>Commute Type</label>
+        <div class="radio-group">${radio('af_commute', [
+          {label:'🚗 Car',value:'car'},{label:'🚌 Transit',value:'transit'},{label:'🚶 Walk',value:'walk'},
+          {label:'🚲 Bike',value:'bike'},{label:'Other',value:'other'}], form.commute_type)}</div>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Canadian Work Experience</label>
+        <div class="radio-group">${radio('af_cdn_exp', [
+          {label:'None',value:'none'},{label:'< 1 yr',value:'<1yr'},{label:'1–3 yrs',value:'1-3yr'},
+          {label:'3+ yrs',value:'3+yr'}], form.canadian_work_experience)}</div>
+      </div>
+    </div>
+  </div>`;
+
+  // ── SECTION 2: Qualifications & Skills ──
+  body += `<div class="assessment-section">
+    <h3>2 — Qualifications &amp; Skills Assessment</h3>
+    <div class="form-row">
+      <div class="form-group"><label>English Proficiency</label>
+        <div class="radio-group">${radio('af_english', [
+          {label:'Basic',value:'basic'},{label:'Conversational',value:'conversational'},
+          {label:'Fluent',value:'fluent'},{label:'Native',value:'native'}], form.english_proficiency)}</div>
+      </div>
+      <div class="form-group"><label>Conflict Resolution</label>
+        <div class="radio-group">${radio('af_conflict', [
+          {label:'Weak',value:'weak'},{label:'Average',value:'average'},{label:'Strong',value:'strong'}], form.conflict_resolution)}</div>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Food / Restaurant Experience</label>
+        <div class="radio-group">${radio('af_food_exp', [
+          {label:'None',value:'none'},{label:'< 6 mo',value:'<6mo'},{label:'6–12 mo',value:'6-12mo'},
+          {label:'1–3 yr',value:'1-3yr'},{label:'3+ yr',value:'3+yr'}], form.food_experience)}</div>
+      </div>
+      <div class="form-group"><label>Smart Serve</label>
+        <div class="radio-group">${radio('af_smartserve', [
+          {label:'Yes',value:'yes'},{label:'No',value:'no'}], form.smart_serve)}</div>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Previous Employer</label><input id="af_prev_employer" value="${form.previous_employer||''}" class="w-full"></div>
+      <div class="form-group"><label>Position</label><input id="af_prev_position" value="${form.previous_position||''}" class="w-full"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Reason for Leaving</label><input id="af_reason_left" value="${form.reason_for_leaving||''}" class="w-full"></div>
+      <div class="form-group"><label>References</label><input id="af_references" value="${form.references||''}" class="w-full" placeholder="Name & contact"></div>
+    </div>
+  </div>`;
+
+  // ── SECTION 3: Role Requirements ──
+  const req = form.requirements || {};
+  function reqItem(label, key) {
+    return `<div class="toggle-row"><span class="toggle-label">${label}</span>${toggle('req_'+key, req[key])}</div>`;
+  }
+  body += `<div class="assessment-section">
+    <h3>3 — Role Requirements &amp; Willingness</h3>
+    ${reqItem('Sweeping, mopping, cleaning','sweeping')}
+    ${reqItem('Toilet &amp; washroom cleaning','toilet')}
+    ${reqItem('Dish washing','dishes')}
+    ${reqItem('Able to lift up to 50 lbs','lift50')}
+    ${reqItem('Working with raw meat','rawmeat')}
+    ${reqItem('Wear hair net, cap &amp; uniform','uniform')}
+    ${reqItem('No fake nails / nail polish','nails')}
+    <div class="form-group" style="margin-top:8px"><label>Allergies (gloves / food)</label><input id="req_allergies" value="${req.allergies||''}" class="w-full"></div>
+    <div class="toggle-row"><span class="toggle-label">Food Handler Certificate</span>
+      <div class="toggle-yesno">
+        <button type="button" class="${req.food_handler==='yes'?'selected-yes':''}" onclick="setToggle3('req_food','yes')">Yes</button>
+        <button type="button" class="${req.food_handler==='already'?'selected-yes':''}" onclick="setToggle3('req_food','already')">Already have</button>
+        <button type="button" class="${req.food_handler==='no'?'selected-no':''}" onclick="setToggle3('req_food','no')">No</button>
+        <input type="hidden" id="req_food" value="${req.food_handler||''}">
+      </div>
+    </div>
+    <div class="toggle-row"><span class="toggle-label">Participate in Nudge (smart-scheduling)</span>${toggle('req_nudge', req.nudge_app, `<button type="button" class="${req.nudge_app==='na'?'selected-na':''}" onclick="setToggle3('req_nudge','na')">N/A</button>`)}</div>
+    <div class="toggle-row"><span class="toggle-label">Unpaid Training Days</span>
+      <div class="toggle-yesno">
+        <button type="button" class="${req.unpaid_training==='1'?'selected-yes':''}" onclick="setToggle3('req_training','1')">1</button>
+        <button type="button" class="${req.unpaid_training==='2'?'selected-yes':''}" onclick="setToggle3('req_training','2')">2</button>
+        <button type="button" class="${req.unpaid_training==='3'?'selected-yes':''}" onclick="setToggle3('req_training','3')">3</button>
+        <button type="button" class="${req.unpaid_training==='na'?'selected-na':''}" onclick="setToggle3('req_training','na')">N/A</button>
+        <input type="hidden" id="req_training" value="${req.unpaid_training||''}">
+      </div>
+    </div>
+    <div class="toggle-row"><span class="toggle-label">3-day unpaid training (4–5 hrs/day)</span>${toggle('req_3day', req.three_day_training)}</div>
+    <div class="toggle-row"><span class="toggle-label">Open early / close late night</span>
+      <div class="toggle-yesno">
+        <button type="button" class="${req.open_close==='yes'?'selected-yes':''}" onclick="setToggle3('req_openclose','yes')">Yes</button>
+        <button type="button" class="${req.open_close==='no'?'selected-no':''}" onclick="setToggle3('req_openclose','no')">No</button>
+        <button type="button" class="${req.open_close==='restrictions'?'selected-na':''}" onclick="setToggle3('req_openclose','restrictions')">Restrictions</button>
+        <input type="hidden" id="req_openclose" value="${req.open_close||''}">
+      </div>
+    </div>
+  </div>`;
+
+  // ── SECTION 4: Logistics ──
+  const logi = form.logistics || {};
+  body += `<div class="assessment-section">
+    <h3>4 — Logistics &amp; Expectations</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Hours expected per week</label><input id="log_hours" value="${logi.hours_per_week||''}" class="w-full" placeholder="e.g. 30-40"></div>
+      <div class="form-group"><label>Salary / wage expectation ($/hr)</label><input id="log_wage" value="${logi.wage_expectation||''}" class="w-full" placeholder="e.g. 17.50"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Earliest start date</label><input id="log_start" type="date" value="${logi.earliest_start_date||''}" class="w-full"></div>
+      <div class="form-group"><label>Can commute reliably in all weather?</label>
+        <div class="radio-group">${radio('log_commute', [{label:'Yes',value:'yes'},{label:'No',value:'no'}], logi.reliable_commute)}</div>
+      </div>
+    </div>
+    <div class="form-group"><label>Additional commitments (second job, school, family)</label>
+      <input id="log_commitments" value="${logi.additional_commitments||''}" class="w-full" placeholder="e.g. School Mon-Wed, second job weekends"></div>
+  </div>`;
+
+  // ── SECTION 5: Availability Grid ──
+  const days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+  const slots = ['morning','afternoon','evening'];
+  const slotLabels = ['Morning<br><span class="text-soft">open–12pm</span>','Afternoon<br><span class="text-soft">12pm–5pm</span>','Evening<br><span class="text-soft">5pm–close</span>'];
+
+  let gridHtml = `<table class="avail-grid"><thead><tr><th>Day</th>`;
+  slotLabels.forEach(sl => gridHtml += `<th>${sl}</th>`);
+  gridHtml += `<th>Notes</th></tr></thead><tbody>`;
+  days.forEach(d => {
+    const dAvail = avail[d.toLowerCase()] || {};
+    gridHtml += `<tr><td style="font-weight:600;text-align:left">${d}</td>`;
+    slots.forEach(s => {
+      const checked = dAvail[s] ? 'checked' : '';
+      gridHtml += `<td class="avail-cell ${checked}" data-day="${d.toLowerCase()}" data-slot="${s}" onclick="toggleAvail(this)"></td>`;
+    });
+    const noteKey = d.toLowerCase() + '_notes';
+    const notes = (avail.notes && avail.notes[d.toLowerCase()]) || '';
+    gridHtml += `<td><input class="avail-note" data-day="${d.toLowerCase()}" value="${esc(notes)}" style="width:100%;border:none;padding:4px;font-size:12px" placeholder="Earliest/latest"></td>`;
+    gridHtml += `</tr>`;
   });
-  body += '</div>';
+  gridHtml += `</tbody></table>`;
 
-  body += `<div class="form-group"><label>Interview Notes</label>
-    <textarea id="scorecardNotes" rows="3">${esc(iv.notes||'')}</textarea></div>`;
-  body += `<div class="form-group"><label>Recommendation</label>
-    <select id="scorecardRecommendation">
-      <option value="" ${!recommendation ? 'selected' : ''}>-- Select --</option>
-      <option value="strong-hire" ${recommendation === 'strong-hire' ? 'selected' : ''}>Strong Hire</option>
-      <option value="hire" ${recommendation === 'hire' ? 'selected' : ''}>Hire</option>
-      <option value="maybe" ${recommendation === 'maybe' ? 'selected' : ''}>Maybe</option>
-      <option value="no" ${recommendation === 'no' ? 'selected' : ''}>No</option>
-    </select></div>`;
+  body += `<div class="assessment-section">
+    <h3>5 — Availability</h3>
+    <p class="text-sm text-soft" style="margin-bottom:8px">Click cells to mark available. Include earliest open and latest close in Notes.</p>
+    <div style="overflow-x:auto">${gridHtml}</div>
+  </div>`;
 
-  // Store criteria in data attr for save
-  body += `<div id="scorecardCriteriaData" style="display:none">${esc(JSON.stringify(criteria))}</div>`;
+  // ── SECTION 6: Interviewer Notes & Assessment ──
+  const assess = form.assessment || {};
+  body += `<div class="assessment-section">
+    <h3>6 — Interviewer Notes &amp; Overall Assessment</h3>
+    <div class="form-group"><label>Impressions &amp; Observations</label>
+      <textarea id="af_impressions" rows="2" class="w-full">${esc(assess.impressions||'')}</textarea></div>
+    <div class="form-row">
+      <div class="form-group"><label>Strengths</label>
+        <textarea id="af_strengths" rows="2" class="w-full">${esc(assess.strengths||'')}</textarea></div>
+      <div class="form-group"><label>Concerns / Red Flags</label>
+        <textarea id="af_concerns" rows="2" class="w-full">${esc(assess.concerns||'')}</textarea></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Overall Rating</label>
+        <div class="overall-stars" id="overallStars">
+          ${[1,2,3,4,5].map(n => `<span class="star ${n <= (assess.overall_rating||0) ? 'active' : ''}" data-rating="${n}" onclick="setOverallRating(${n})">★</span>`).join('')}
+        </div>
+        <input type="hidden" id="af_overall_rating" value="${assess.overall_rating||0}">
+      </div>
+      <div class="form-group"><label>Recommended Starting Wage ($/hr)</label>
+        <input id="af_rec_wage" value="${assess.recommended_wage||''}" class="w-full" placeholder="e.g. 17.50"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Decision</label>
+        <select id="af_decision" class="w-full">
+          <option value="">-- Select --</option>
+          <option value="hire" ${assess.decision==='hire'?'selected':''}>✅ Hire</option>
+          <option value="conditional" ${assess.decision==='conditional'?'selected':''}>⚠️ Conditional (see notes)</option>
+          <option value="do_not_hire" ${assess.decision==='do_not_hire'?'selected':''}>❌ Do Not Hire</option>
+          <option value="on_hold" ${assess.decision==='on_hold'?'selected':''}>⏳ On Hold</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Next Steps / Follow-Up</label>
+        <input id="af_next_steps" value="${assess.next_steps||''}" class="w-full" placeholder="e.g. Call for second interview"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Interviewer Name</label>
+        <input id="af_interviewer" value="${assess.interviewer_name||iv.interviewer||''}" class="w-full"></div>
+      <div class="form-group"><label>Date</label>
+        <input id="af_assess_date" type="date" value="${assess.date||iv.scheduled_date||''}" class="w-full"></div>
+    </div>
+  </div>`;
 
   document.getElementById('scorecardBody').innerHTML = body;
   document.getElementById('scorecardModal').classList.remove('hidden');
 }
 
-function setRating(criterion, rating) {
-  const stars = document.querySelectorAll(`.rating-stars[data-criterion="${criterion}"] .star`);
-  stars.forEach((s, i) => {
+// ── Toggle helpers for assessment form ──
+function setToggle3(id, val) {
+  document.getElementById(id).value = val;
+}
+
+function toggleAvail(cell) {
+  cell.classList.toggle('checked');
+}
+
+function setOverallRating(rating) {
+  document.getElementById('af_overall_rating').value = rating;
+  document.querySelectorAll('#overallStars .star').forEach((s, i) => {
     s.classList.toggle('active', i < rating);
   });
 }
 
+// ── Collect form data and save ──
+function _collectAssessmentForm() {
+  function val(id) { return (document.getElementById(id) || {}).value || ''; }
+  function radioVal(name) {
+    const el = document.querySelector(`input[name="${name}"]:checked`);
+    return el ? el.value : '';
+  }
+  function reqVal(key) { return val('req_'+key); }
+
+  // Collect availability grid
+  const days = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
+  const slots = ['morning','afternoon','evening'];
+  const availability = {};
+  days.forEach(d => {
+    availability[d] = {};
+    slots.forEach(s => {
+      const cell = document.querySelector(`.avail-cell[data-day="${d}"][data-slot="${s}"]`);
+      availability[d][s] = cell ? cell.classList.contains('checked') : false;
+    });
+  });
+
+  return {
+    position_applied: val('af_position'),
+    status_in_canada: val('af_status'),
+    arrival_date: val('af_arrival'),
+    semester: val('af_semester'),
+    residence_city: val('af_city'),
+    drivers_license: radioVal('af_dl'),
+    drivers_license_class: val('af_dl_class'),
+    commute_type: radioVal('af_commute'),
+    canadian_work_experience: radioVal('af_cdn_exp'),
+    english_proficiency: radioVal('af_english'),
+    conflict_resolution: radioVal('af_conflict'),
+    food_experience: radioVal('af_food_exp'),
+    smart_serve: radioVal('af_smartserve'),
+    previous_employer: val('af_prev_employer'),
+    previous_position: val('af_prev_position'),
+    reason_for_leaving: val('af_reason_left'),
+    references: val('af_references'),
+    requirements: {
+      sweeping: reqVal('sweeping'), toilet: reqVal('toilet'), dishes: reqVal('dishes'),
+      lift50: reqVal('lift50'), rawmeat: reqVal('rawmeat'), uniform: reqVal('uniform'),
+      nails: reqVal('nails'), allergies: val('req_allergies'),
+      food_handler: val('req_food'), nudge_app: val('req_nudge'),
+      unpaid_training: val('req_training'),
+      three_day_training: reqVal('3day'), open_close: val('req_openclose'),
+    },
+    logistics: {
+      hours_per_week: val('log_hours'), wage_expectation: val('log_wage'),
+      earliest_start_date: val('log_start'), reliable_commute: radioVal('log_commute'),
+      additional_commitments: val('log_commitments'),
+    },
+    availability: availability,
+    assessment: {
+      impressions: val('af_impressions'), strengths: val('af_strengths'),
+      concerns: val('af_concerns'),
+      overall_rating: parseInt(val('af_overall_rating')) || 0,
+      recommended_wage: val('af_rec_wage'),
+      decision: val('af_decision'), next_steps: val('af_next_steps'),
+      interviewer_name: val('af_interviewer'), date: val('af_assess_date'),
+    },
+  };
+}
+
 async function saveScorecard() {
   if (!activeScorecardInterviewId) return;
-  const criteriaEl = document.getElementById('scorecardCriteriaData');
-  let criteria;
-  try { criteria = JSON.parse(criteriaEl.textContent); } catch { criteria = []; }
+  const formData = _collectAssessmentForm();
 
-  const ratings = {};
-  criteria.forEach(cr => {
-    const stars = document.querySelectorAll(`.rating-stars[data-criterion="${cr}"] .star.active`);
-    ratings[cr] = stars.length;
-  });
-
-  const notes = document.getElementById('scorecardNotes').value.trim();
-  const recommendation = document.getElementById('scorecardRecommendation').value;
+  // Determine status based on decision
+  const decision = formData.assessment.decision;
+  let status = 'scheduled';
+  if (decision === 'hire' || decision === 'conditional' || decision === 'do_not_hire') {
+    status = 'completed';
+  }
 
   await api('PUT', `/api/interviews/${activeScorecardInterviewId}`, {
-    ratings,
-    notes,
-    recommendation,
-    status: recommendation ? 'completed' : 'scheduled',
+    assessment_form: formData,
+    status: status,
+    notes: formData.assessment.impressions || '',
+    recommendation: decision === 'hire' ? 'hire' : decision === 'conditional' ? 'maybe' : decision === 'do_not_hire' ? 'no' : '',
   });
 
-  // If strong hire or hire, offer to move to offer stage
-  if (recommendation === 'strong-hire' || recommendation === 'hire') {
+  // Auto-promote to offer if hired
+  if (decision === 'hire' || decision === 'conditional') {
     const iv = await api('GET', `/api/interviews/${activeScorecardInterviewId}`);
     const c = allCandidates.find(x => x.id === iv.candidate_id);
     if (c && c.stage !== 'offer' && c.stage !== 'hired') {
-      if (confirm(`${c.name} scored well! Move to Offer stage?`)) {
+      if (confirm(`${c.name} — move to Offer stage?`)) {
         await api('PUT', `/api/candidates/${c.id}/stage`, { stage: 'offer' });
+        showToast(`✅ ${c.name} moved to Offer`);
       }
     }
   }
 
-  showToast('Scorecard saved');
+  showToast('Assessment saved');
   closeModal('scorecardModal');
   await loadAll();
 }
