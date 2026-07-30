@@ -451,6 +451,170 @@ def api_delete_interview(interview_id):
 
 
 # ---------------------------------------------------------------------------
+# Employees (hired staff — separate from recruiting candidates)
+# ---------------------------------------------------------------------------
+
+
+def _list_employees(search=None):
+    employees = []
+    for folder in sorted(EMPLOYEES_DIR.iterdir()):
+        if folder.is_dir():
+            e = _read_json(folder / "employee.json")
+            if e:
+                # Add paystub count
+                paystub_dir = folder / "paystubs"
+                e["paystub_count"] = len(list(paystub_dir.glob("*.pdf"))) if paystub_dir.exists() else 0
+                employees.append(e)
+    if search:
+        s = search.lower()
+        employees = [e for e in employees if s in e.get("name", "").lower()]
+    return sorted(employees, key=lambda e: e.get("name", "").lower())
+
+
+def _get_employee(emp_id):
+    return _read_json(EMPLOYEES_DIR / emp_id / "employee.json")
+
+
+def _save_employee(emp_id, data):
+    (EMPLOYEES_DIR / emp_id).mkdir(parents=True, exist_ok=True)
+    _write_json(EMPLOYEES_DIR / emp_id / "employee.json", data)
+
+
+@app.route("/api/employees", methods=["GET"])
+def api_list_employees():
+    search = request.args.get("search", "")
+    return jsonify(_list_employees(search))
+
+
+@app.route("/api/employees", methods=["POST"])
+def api_create_employee():
+    data = request.get_json()
+    if not data or not data.get("name"):
+        return jsonify({"error": "Name is required"}), 400
+    emp_id = _slug(data["name"]) + "-" + uuid.uuid4().hex[:6]
+    employee = {
+        "id": emp_id,
+        "name": data["name"],
+        "email": data.get("email", ""),
+        "phone": data.get("phone", ""),
+        "position": data.get("position", ""),
+        "location": data.get("location", ""),
+        "status": data.get("status", "active"),
+        "start_date": data.get("start_date", ""),
+        "sin": data.get("sin", ""),
+        "wage": data.get("wage", ""),
+        "emergency_contact": data.get("emergency_contact", ""),
+        "notes": data.get("notes", ""),
+        "certifications": data.get("certifications", {}),
+        "documents": data.get("documents", []),
+        "created_at": _now_iso(),
+        "updated_at": _now_iso(),
+    }
+    _save_employee(emp_id, employee)
+    return jsonify(employee), 201
+
+
+@app.route("/api/employees/<emp_id>", methods=["GET"])
+def api_get_employee(emp_id):
+    e = _get_employee(emp_id)
+    if not e:
+        return jsonify({"error": "Employee not found"}), 404
+    # List paystub files
+    paystub_dir = EMPLOYEES_DIR / emp_id / "paystubs"
+    paystubs = []
+    if paystub_dir.exists():
+        for f in sorted(paystub_dir.glob("*.pdf")):
+            paystubs.append({"filename": f.name, "size": f.stat().st_size, "modified": f.stat().st_mtime})
+    e["paystubs"] = paystubs
+    # List documents
+    docs_dir = EMPLOYEES_DIR / emp_id / "documents"
+    documents = []
+    if docs_dir.exists():
+        for f in sorted(docs_dir.iterdir()):
+            documents.append({"filename": f.name, "size": f.stat().st_size})
+    e["documents"] = documents
+    return jsonify(e)
+
+
+@app.route("/api/employees/<emp_id>", methods=["PUT"])
+def api_update_employee(emp_id):
+    e = _get_employee(emp_id)
+    if not e:
+        return jsonify({"error": "Employee not found"}), 404
+    data = request.get_json()
+    for field in ["name", "email", "phone", "position", "location", "status",
+                   "start_date", "sin", "wage", "emergency_contact", "notes",
+                   "certifications"]:
+        if field in data:
+            e[field] = data[field]
+    e["updated_at"] = _now_iso()
+    _save_employee(emp_id, e)
+    return jsonify(e)
+
+
+@app.route("/api/employees/<emp_id>", methods=["DELETE"])
+def api_delete_employee(emp_id):
+    shutil.rmtree(EMPLOYEES_DIR / emp_id, ignore_errors=True)
+    return jsonify({"ok": True})
+
+
+@app.route("/api/employees/<emp_id>/paystub", methods=["POST"])
+def api_upload_paystub(emp_id):
+    e = _get_employee(emp_id)
+    if not e:
+        return jsonify({"error": "Employee not found"}), 404
+    if "file" not in request.files:
+        return jsonify({"error": "No file provided"}), 400
+    file = request.files["file"]
+    if file.filename == "":
+        return jsonify({"error": "No file selected"}), 400
+
+    paystub_dir = EMPLOYEES_DIR / emp_id / "paystubs"
+    paystub_dir.mkdir(parents=True, exist_ok=True)
+    filename = secure_filename(file.filename)
+    file.save(str(paystub_dir / filename))
+    return jsonify({"filename": filename, "ok": True})
+
+
+@app.route("/api/employees/<emp_id>/document", methods=["POST"])
+def api_upload_document(emp_id):
+    e = _get_employee(emp_id)
+    if not e:
+        return jsonify({"error": "Employee not found"}), 404
+    if "file" not in request.files:
+        return jsonify({"error": "No file provided"}), 400
+    file = request.files["file"]
+    if file.filename == "":
+        return jsonify({"error": "No file selected"}), 400
+
+    docs_dir = EMPLOYEES_DIR / emp_id / "documents"
+    docs_dir.mkdir(parents=True, exist_ok=True)
+    filename = secure_filename(file.filename)
+    file.save(str(docs_dir / filename))
+
+    # Update employee record with document listing
+    doc_entry = {"filename": filename, "uploaded_at": _now_iso()}
+    if "documents" not in e:
+        e["documents"] = []
+    e["documents"].append(doc_entry)
+    e["updated_at"] = _now_iso()
+    _save_employee(emp_id, e)
+    return jsonify(doc_entry)
+
+
+@app.route("/api/employees/<emp_id>/files/<path:filename>")
+def api_serve_employee_file(emp_id, filename):
+    filepath = EMPLOYEES_DIR / emp_id / filename
+    if not filepath.exists():
+        filepath = EMPLOYEES_DIR / emp_id / "paystubs" / filename
+    if not filepath.exists():
+        filepath = EMPLOYEES_DIR / emp_id / "documents" / filename
+    if not filepath.exists() or not filepath.is_file():
+        return jsonify({"error": "File not found"}), 404
+    return send_from_directory(str(filepath.parent), str(filepath.name))
+
+
+# ---------------------------------------------------------------------------
 # Scorecard criteria templates
 # ---------------------------------------------------------------------------
 
