@@ -13,3 +13,4 @@ check_js.py
 find_js_error.py
 find_js_error2.py
 gen_test_resume.py
+validate_js.py
