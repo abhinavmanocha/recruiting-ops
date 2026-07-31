@@ -1220,8 +1220,8 @@ function renderEmployees() {
     ? emps.map(e => {
         const statusColors = { active: 'var(--green)', inactive: 'var(--gray)', terminated: 'var(--red)' };
         const sc = statusColors[e.status] || 'var(--gray)';
-        const paystubCount = (e.paystubs||[]).length;
-        const docCount = (e.documents||[]).length;
+        const paystubCount = e.paystub_count || 0;
+        const docCount = e.document_count || 0;
         return `<div class="job-card" onclick="openEmployeeDetail('${e.id}')">
           <div class="job-card-info">
             <div class="job-card-title">${esc(e.name)}</div>
@@ -1356,8 +1356,8 @@ function switchEmpTab(tab) {
       </div>
       ${paystubs.length
         ? paystubs.map((p,i) => `<div class="file-row" style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
-            <span>📄 ${esc(p)}</span>
-            <a href="/api/employees/${emp.id}/files/paystubs/${encodeURIComponent(p)}" target="_blank" class="btn btn-sm btn-outline">⬇ Download</a>
+            <span>📄 ${esc(p.filename || p)}</span>
+            <a href="/api/employees/${emp.id}/files/paystubs/${encodeURIComponent(p.filename || p)}" target="_blank" class="btn btn-sm btn-outline">⬇ Download</a>
           </div>`).join('')
         : '<div class="text-soft text-sm">No paystubs uploaded yet</div>'}`;
     } else if (tab === 'documents') {
@@ -1367,18 +1367,19 @@ function switchEmpTab(tab) {
       </div>
       ${docs.length
         ? docs.map((d,i) => `<div class="file-row" style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
-            <span>📎 ${esc(d)}</span>
-            <a href="/api/employees/${emp.id}/files/documents/${encodeURIComponent(d)}" target="_blank" class="btn btn-sm btn-outline">⬇ Download</a>
+            <span>📎 ${esc(d.filename || d)}</span>
+            <a href="/api/employees/${emp.id}/files/documents/${encodeURIComponent(d.filename || d)}" target="_blank" class="btn btn-sm btn-outline">⬇ Download</a>
           </div>`).join('')
         : '<div class="text-soft text-sm">No documents uploaded yet</div>'}`;
     } else if (tab === 'certifications') {
       const certs = emp.certifications || {};
       const certFields = [
-        {key:'smart_serve',label:'Smart Serve'},
-        {key:'food_handler',label:'Food Handler'},
+        {key:'Smart Serve',label:'Smart Serve'},
+        {key:'Food Handler',label:'Food Handler'},
         {key:'WHMIS',label:'WHMIS'},
-        {key:'allergen_awareness',label:'Allergen Awareness'},
-        {key:'first_aid',label:'First Aid / CPR'},
+        {key:'AODA Training',label:'AODA Training'},
+        {key:'Allergen Awareness',label:'Allergen Awareness'},
+        {key:'First Aid / CPR',label:'First Aid / CPR'},
       ];
       body.innerHTML = `<p class="text-sm text-soft" style="margin-bottom:12px">Toggle certifications on/off for this employee.</p>
         ${certFields.map(cf => {

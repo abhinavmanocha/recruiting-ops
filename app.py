@@ -461,9 +461,11 @@ def _list_employees(search=None):
         if folder.is_dir():
             e = _read_json(folder / "employee.json")
             if e:
-                # Add paystub count
+                # Add paystub + document counts
                 paystub_dir = folder / "paystubs"
                 e["paystub_count"] = len(list(paystub_dir.glob("*.pdf"))) if paystub_dir.exists() else 0
+                docs_dir = folder / "documents"
+                e["document_count"] = len(list(docs_dir.iterdir())) if docs_dir.exists() else 0
                 employees.append(e)
     if search:
         s = search.lower()
