@@ -1,0 +1,366 @@
+================================================================================
+RECRUITING OPS CENTRE — COMPREHENSIVE PROJECT DOCUMENTATION
+================================================================================
+One-stop shop for restaurant employee management: recruiting pipeline,
+interview assessments, employee records, paystubs, and documents.
+
+GitHub:  https://github.com/abhinavmanocha/recruiting-ops
+Local:   http://localhost:5001
+Login:   admin / recruitops (configurable via RECRUIT_USER / RECRUIT_PASS env vars)
+
+================================================================================
+1. PURPOSE
+================================================================================
+
+The Recruiting Ops Centre consolidates the full employee lifecycle into a
+single internal web application. It replaces paper forms, scattered
+spreadsheets, and the legacy standalone paystub viewer with one cohesive
+tool. The owner/manager can:
+
+  - Post jobs and track applicants through a hiring pipeline
+  - Conduct structured interviews using the official SLF assessment form
+  - Store permanent employee records (SIN, wage, certifications, etc.)
+  - Keep paystub PDFs and documents organized per employee
+  - Access everything from anywhere (Cloud Run / Armbian / Cloudflare tunnel)
+
+================================================================================
+2. ARCHITECTURE & TECH STACK
+================================================================================
+
+MAJOR:
+  - Backend:  Python Flask (single app.py, ~850 lines)
+  - Frontend: Single-page HTML/JS (templates/index.html, ~2100 lines)
+              No build step, no framework — vanilla JS + custom CSS
+  - Storage:  File-system JSON (no database required)
+              data/jobs/      -> job postings
+              data/candidates/-> applicants
+              data/interviews/-> scheduled interviews + assessment forms
+              data/employees/ -> hired staff (employee.json + paystubs/ + documents/)
+  - Auth:     HTTP Basic Auth on all routes (before_request hook)
+
+MINOR:
+  - Resume parsing: PyMuPDF (PDF text) + python-docx (DOCX) + regex engine
+  - Optional Gemini API enhancement for resume parsing (uses localStorage key)
+  - Drag-and-drop kanban via SortableJS (CDN)
+  - Resume files saved to uploads/ (or /tmp/uploads on Cloud Run)
+  - Dockerfile + gunicorn for Cloud Run deployment
+  - import_employees.py: legacy paystub system -> employee database migrator
+
+================================================================================
+3. FEATURE INVENTORY
+================================================================================
+
+3.1 DASHBOARD (tab: Dashboard)
+MAJOR:
+  - At-a-glance stats: active jobs, total candidates, in-interview, hired,
+    upcoming interviews
+  - Active job postings list (click -> Jobs tab)
+  - Upcoming interviews preview (next 5 by date)
+
+3.2 JOB POSTINGS (tab: Jobs)
+MAJOR:
+  - Create/edit/delete job postings
+  - Fields: title, department (FOH/BOH/Management/Admin), location,
+    employment type, description, requirements, scorecard criteria
+  - Live stats: active/filled/closed counts
+  - Per-job candidate counts by pipeline stage (colored pills)
+  - Search bar
+MINOR:
+  - Click job card -> detail modal with candidates grouped by stage
+  - Edit button on each card
+  - Scorecard criteria textarea (one per line) stored per job
+
+3.3 PIPELINE / KANBAN (tab: Pipeline)
+MAJOR:
+  - Drag-and-drop board with 6 stages:
+    Applied -> Screening -> Interview -> Offer -> Hired -> Rejected
+  - Stage column headers with colored underline + counts
+  - Job filter dropdown (All Positions / specific job)
+  - Drag updates candidate stage instantly (PUT /api/candidates/<id>/stage)
+MINOR:
+  - Toast notification when moving to Interview without an interview scheduled
+  - Empty columns show "Drop here" placeholder
+
+3.4 CANDIDATES (tab: Candidates)
+MAJOR:
+  - Full applicant table: name, email, job, stage pill, source, date
+  - Search by name/email
+  - Filter by job and by stage
+  - Add/edit/delete candidates
+  - Resume import (see 3.7)
+MINOR:
+  - Click name -> detail modal with notes, resume link, interview history
+  - Edit/delete buttons per row
+  - Source dropdown: Indeed, LinkedIn, Referral, Walk-in, Website, Other
+
+3.5 INTERVIEWS (tab: Interviews)
+MAJOR:
+  - Schedule interviews: candidate, interviewer, date, time, type,
+    location/link
+  - Full SLF (St. Louis Wings) Interview Assessment Form modal
+  - Interview list with status (Scheduled / Completed / Cancelled)
+  - Edit/cancel interviews
+MINOR:
+  - Filters: by job, by status
+  - Auto-moves candidate to Interview stage when scheduled
+  - Auto-promotes to Offer stage when assessment says Hire/Conditional
+  - Interview cards show day/month blocks and decision text
+
+3.6 SLF INTERVIEW ASSESSMENT FORM (in Interviews tab, "Score/View Form")
+MAJOR - Section 1: Position & Applicant Info
+  - Position, Name, Phone, Email (pre-filled from candidate)
+  - Status in Canada (Citizen/PR/Work Permit/Study Permit/Visitor/Other)
+  - Arrival date, semester, residence city
+  - Driver's license Yes/No + class, commute type (car/transit/walk/bike/other)
+  - Canadian work experience (none/<1yr/1-3yr/3+yr)
+MAJOR - Section 2: Qualifications & Skills
+  - English proficiency (basic/conversational/fluent/native)
+  - Conflict resolution (weak/average/strong)
+  - Food/restaurant experience (none/<6mo/6-12mo/1-3yr/3+yr)
+  - Smart Serve (Yes/No)
+  - Previous employer, position, reason for leaving, references
+MAJOR - Section 3: Role Requirements & Willingness (Yes/No toggles)
+  - Sweeping/mopping/cleaning, toilet & washroom cleaning, dish washing
+  - Lift up to 50 lbs, raw meat handling, hair net/uniform, no fake nails
+  - Allergies (free text)
+  - Food Handler Certificate (Yes / Already have / No)
+  - 7shifts (Yes/No/N/A)
+  - Yoobic (Yes/No/N/A)
+  - Ameego (Yes/No/N/A)
+  - Unpaid training days (1 / 2 / 3 / N/A)
+  - 3-day unpaid training (4-5 hrs/day) Yes/No
+  - Open early / close late (Yes/No/Restrictions)
+  - Probationary 3 months from start date (Yes/No)
+MAJOR - Section 4: Logistics & Expectations
+  - Hours expected per week, wage expectation ($/hr)
+  - Earliest start date, reliable commute in all weather (Yes/No)
+  - Additional commitments (second job, school, family)
+MAJOR - Section 5: Availability Grid
+  - Interactive 7-day x 3-slot table (Morning/Afternoon/Evening)
+  - Click cells to toggle availability (green checkmark)
+  - Notes column per day (earliest open / latest close)
+MAJOR - Section 6: Interviewer Notes & Assessment
+  - Impressions, strengths, concerns/red flags (text areas)
+  - Overall rating 1-5 stars
+  - Recommended starting wage ($/hr)
+  - Decision: Hire / Conditional / Do Not Hire / On Hold
+  - Next steps, interviewer name, date
+MINOR:
+  - Saving a Hire/Conditional decision prompts to move candidate to Offer
+  - Assessment stored as JSON on the interview record (assessment_form)
+  - Old star-ratings scorecards remain viewable (backward compatible)
+
+3.7 RESUME IMPORT (Candidates tab -> "Import Resume" + inline drop zone)
+MAJOR:
+  - Drag-and-drop PDF/DOCX resume upload
+  - Auto-parses: name, email, phone, LinkedIn URL
+  - Extracts skills (restaurant-focused keyword list)
+  - Extracts education entries
+  - Extracts experience summary (section-aware)
+  - Preview card with all extracted info
+  - "Create Candidate" button to save
+MINOR:
+  - Inline drop zone inside Add/Edit Candidate modal (auto-fills form)
+  - Resume file saved to uploads/ and linked to candidate
+  - Candidate detail shows "View Resume (PDF)" link
+  - Candidate table shows a file icon for candidates with resumes
+  - Gemini API enhancement if a key is stored in localStorage
+  - Batch-friendly: file input accepts PDF/DOCX/DOC
+
+3.8 EMPLOYEES (tab: Employees) — HIRED STAFF
+MAJOR:
+  - Full employee list: name, position, location, status badge
+  - Search + status filter (Active/Inactive/Terminated)
+  - Add/edit/delete employees
+  - Employee detail modal with 4 tabs:
+    * Details  - all employee info (name, email, phone, position, location,
+                 status, start date, SIN, wage, emergency contact, notes)
+    * Paystubs - upload PDFs, list with download links
+    * Documents- upload any file, list with download links
+    * Certifications - toggle Smart Serve, Food Handler, WHMIS,
+                 AODA Training, Allergen Awareness, First Aid/CPR
+MINOR:
+  - Paystub count + document count shown on each employee card
+  - Bulk paystub upload: pick employee in modal, then upload PDF(s)
+  - 44 employees pre-imported from legacy paystub system (24 active,
+    20 terminated) with 723 paystub PDFs
+  - Paystubs organized per employee: data/employees/<id>/paystubs/
+  - Documents: data/employees/<id>/documents/
+
+3.9 IMPORT SCRIPT (import_employees.py)
+MAJOR:
+  - One-shot migration from legacy paystub folder structure
+    (D:\000_Companies\St. Louis Bar and Grill - 1001164368 Ontario Ltd\07_Paystubs)
+  - Reads employee.json (personal, employment, certifications,
+    emergency contact, uniform)
+  - Copies all paystub PDFs (year-folder aware, preserves order)
+  - Handles z__Past_Employees as terminated status
+  - Idempotent: safe to re-run (updates existing, skips duplicates)
+MINOR:
+  - Maps legacy schema -> new employee schema
+  - Usage: python import_employees.py [source] [target]
+
+================================================================================
+4. API REFERENCE (all routes require HTTP Basic Auth)
+================================================================================
+
+JOBS
+  GET    /api/jobs                         list (with counts per stage)
+  POST   /api/jobs                         create
+  GET    /api/jobs/<id>                    detail (with candidates + interviews)
+  PUT    /api/jobs/<id>                    update
+  DELETE /api/jobs/<id>                    delete (+ linked candidates)
+
+CANDIDATES
+  GET    /api/candidates                   list (?job_id=, ?stage=, ?search=)
+  POST   /api/candidates                   create
+  GET    /api/candidates/<id>              detail (with interviews + criteria)
+  PUT    /api/candidates/<id>              update
+  PUT    /api/candidates/<id>/stage        quick stage change (kanban)
+  DELETE /api/candidates/<id>              delete (+ interviews)
+  POST   /api/candidates/<id>/resume       upload resume file
+
+INTERVIEWS
+  GET    /api/interviews                   list (?candidate_id=, ?job_id=, ?upcoming=)
+  POST   /api/interviews                   schedule (auto-moves candidate to interview)
+  GET    /api/interviews/<id>              detail
+  PUT    /api/interviews/<id>              update (incl. assessment_form)
+  DELETE /api/interviews/<id>              delete
+
+EMPLOYEES
+  GET    /api/employees                    list (with paystub_count, document_count)
+  POST   /api/employees                    create
+  GET    /api/employees/<id>               detail (with paystubs + documents arrays)
+  PUT    /api/employees/<id>               update
+  DELETE /api/employees/<id>               delete
+  POST   /api/employees/<id>/paystub       upload paystub PDF
+  POST   /api/employees/<id>/document      upload document
+  GET    /api/employees/<id>/files/<path>  serve paystub/document file
+
+RESUMES
+  POST   /api/resume/parse                 upload + parse resume (returns structured data)
+  POST   /api/resume/parse/<candidate_id>  parse + attach to candidate
+
+MISC
+  GET    /api/scorecard-criteria           default criteria list
+  GET    /uploads/<filename>               serve uploaded resume files
+  GET    /                                main page
+
+================================================================================
+5. DATA MODEL (JSON schemas)
+================================================================================
+
+JOB (data/jobs/<id>/job.json)
+  id, title, department, location, status (active/filled/closed),
+  employment_type, description, requirements, scorecard_criteria[],
+  created_at, updated_at
+
+CANDIDATE (data/candidates/<id>/candidate.json)
+  id, name, email, phone, job_id, stage (applied/screening/interview/
+  offer/hired/rejected), applied_date, source, notes, resume_filename,
+  parsed_skills[], parsed_education[], parsed_experience,
+  created_at, updated_at
+
+INTERVIEW (data/interviews/<id>/interview.json)
+  id, candidate_id, job_id, interviewer, scheduled_date, scheduled_time,
+  type (phone/video/in-person/practical), status (scheduled/completed/
+  cancelled), location_or_link, ratings{}, notes, recommendation,
+  assessment_form (full SLF form object), created_at, updated_at
+
+EMPLOYEE (data/employees/<id>/employee.json)
+  id, name, email, phone, position, location, status (active/inactive/
+  terminated), start_date, sin, wage, emergency_contact, notes,
+  certifications{}, address, birthday, uniform{}, vacation_pay,
+  termination_date, termination_reason, documents[],
+  created_at, updated_at
+  PLUS folders: paystubs/*.pdf, documents/*
+
+ASSESSMENT_FORM structure (stored on interview):
+  position_applied, status_in_canada, arrival_date, semester, residence_city,
+  drivers_license, drivers_license_class, commute_type,
+  canadian_work_experience, english_proficiency, conflict_resolution,
+  food_experience, smart_serve, previous_employer, previous_position,
+  reason_for_leaving, references,
+  requirements { sweeping, toilet, dishes, lift50, rawmeat, uniform, nails,
+                 allergies, food_handler, seven_shifts, yoobic, ameego,
+                 unpaid_training, three_day_training, open_close, probationary },
+  logistics { hours_per_week, wage_expectation, earliest_start_date,
+              reliable_commute, additional_commitments },
+  availability { monday..sunday x {morning, afternoon, evening} },
+  assessment { impressions, strengths, concerns, overall_rating,
+               recommended_wage, decision, next_steps,
+               interviewer_name, date }
+
+================================================================================
+6. DEPLOYMENT & RUN OPTIONS
+================================================================================
+
+LOCAL (Windows):
+  cd /d/Projects/recruiting-ops
+  python app.py
+  -> http://localhost:5001  (binds 0.0.0.0)
+
+ARMBIAN BOX (192.168.2.137, LoopTV S905X3):
+  - systemd service: recruiting-ops.service
+  - App dir: ~/www/recruiting-ops
+  - Python venv with flask, werkzeug, pymupdf, python-docx, gunicorn
+  - Files stored locally: ~/www/recruiting-ops/data + uploads
+  - Update: git fetch origin && git reset --hard origin/master
+            sudo systemctl restart recruiting-ops.service
+  - Public access via cloudflared:
+      Quick:  cloudflared tunnel --url http://localhost:5001
+      Named:  tunnel 49eabe30-f576-45f5-83a5-ca5cd41f26dc
+              (CNAME recruiting-ops -> <tunnel-id>.cfargotunnel.com)
+
+CLOUD RUN (Google, project punch-clock-bb-001):
+  gcloud run deploy recruiting-ops --source . --region us-central1 \
+    --allow-unauthenticated --memory 512Mi --set-env-vars RECRUIT_USER=admin,RECRUIT_PASS=recruitops
+  URL: https://recruiting-ops-3umdis6sya-uc.a.run.app
+  NOTE: Cloud Run filesystem is ephemeral (uploads/ = /tmp/uploads).
+        For permanent file storage, use Google Cloud Storage or Armbian.
+
+================================================================================
+7. CONFIGURATION
+================================================================================
+
+ENV VARS:
+  RECRUIT_USER   default: admin
+  RECRUIT_PASS   default: recruitops
+  RECRUIT_UPLOADS_DIR  override upload folder (default ./uploads)
+  K_SERVICE      set automatically on Cloud Run (switches to /tmp/uploads)
+
+CREDENTIALS:
+  HTTP Basic Auth protects the entire site (HTML + all APIs).
+  On Armbian, env vars are set in the systemd unit file.
+
+================================================================================
+8. KNOWN NOTES / PITFALLS
+================================================================================
+
+  - Flask dev server (python app.py) is fine for internal use; for
+    production use gunicorn (see Dockerfile).
+  - Never put the Cloudflare API token or passwords in committed files —
+    GitHub secret scanning will block pushes (use env vars).
+  - The trycloudflare.com quick-tunnel URL changes on every restart;
+    the named tunnel + DNS CNAME gives a permanent URL.
+  - data/ and uploads/ are gitignored — they hold real employee data.
+  - import_employees.py re-runs are safe (idempotent by employee name).
+  - When adding fields to the assessment form, update BOTH the render
+    function (openScorecard) AND the collector (_collectAssessmentForm).
+
+================================================================================
+9. ROADMAP / FUTURE IDEAS
+================================================================================
+
+  - Google Cloud Storage for permanent resume/paystub persistence on Cloud Run
+  - Email notifications for interview reminders
+  - CSV export of candidates / employees / assessments
+  - PDF generation of the SLF assessment form (printable)
+  - Attendance/availability export to 7shifts/Ameego
+  - Role-based access (owner vs manager)
+  - Onboarding checklist tied to hired candidates
+  - Employee anniversary / certification expiry reminders
+
+================================================================================
+END OF DOCUMENT
+================================================================================
